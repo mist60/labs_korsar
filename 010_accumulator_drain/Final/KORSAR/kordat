@@ -1,0 +1,152 @@
+restart = 0;
+title = 'VD.035.004 SLVES accumulator drain';
+dt_max = 0.001;
+dt_out = 0.1;
+fin_tim = 1500;
+dt_sav = 0;
+append_res = 1;
+append_sav = 0;
+check_only = 0;
+local_err = 1.0e-4;
+ngas = 'H2O, N2';
+dt_diag = dt_out;
+inf = 11;
+accel_stat = 0;
+nwsp_dat='nwsp_dat';
+_tauRest = 0.;
+_debug = 0;
+_diag = 0;
+_monPer = 5.0;
+_t0C = 273.15;
+_tOffset = _t0C;
+_pi = 3.1415927;
+_gg = 9.81;
+_MPa = 1.e6;
+_kPa = 1.e3;
+_pAtm = 101.3e+03;
+_tAtm = 20.+_t0C;
+
+G_OUT = 0.;
+
+MAIN:
+T_CLOSE = 0.;
+T_FIN_CLOSE = 0.;
+LAYOUT
+  SLVES1/1 - CH1/i;
+  CH1/o - BVOL_T1;
+  CH1(6) - VAL1;
+END
+
+CALL _Ch;
+CALL _Bv;
+CALL _Val;
+CALL _Slv;
+
+SET _DtHandle;
+SET _CalcSensor;
+SET Close_Val;
+
+OUT _Out;
+
+END
+
+DATA _Ch
+  MDL = 'CH';
+  ELS = 1;
+  IF(NV==1) THEN
+    N = 10;
+    S = 0.7854*(0.040**2);
+    TYPE = 0;
+    PR = _pi*0.040;
+    DZ = 1./N;
+    DH = 0.;
+    P = 1.*_MPa;
+    T(1,1:N) = 45.+_t0C;
+    T(2,1:N) = 45.+_t0C;
+    VOID = 0.;
+    XNG(3,1:N) = 0.999;
+    XNG(4,1:N) = 0.0;
+  ENDIF
+END
+
+DATA _Bv
+  MDL = 'BVOL_T';
+  ELS = 1;
+  IF(NV==1) THEN
+    P = 0.5*_MPa;
+    VOID = 0.;
+    T = 45.+_t0C;
+    XNG(3) = 0.999;
+    XNG(4) = 0.0;
+  ENDIF
+END
+
+DATA _Val
+  MDL = 'VAL';
+  ELS = 1;
+  IF(NV==1) THEN
+    K = 3;
+    F(1,1)=0.; F(1,2)=0.; F(1,3)=0.;
+    F(2,1)=0.5; F(2,2)=0.7; F(2,3)=0.7;
+    F(3,1)=1.; F(3,2)=1.; F(3,3)=1.;
+    CSI1 = 8780.;
+    CSI2 = 8780.;
+    S = 1.;
+  ENDIF
+END
+
+DATA _Slv
+  MDL = 'SLVES';
+  ELS = 1;
+  IF(NV==1) THEN
+    NH = 1;
+    HP(1) = 0.030;
+    H = 2.0;
+    V = 1.0;
+    D = 0.;
+    P = 1.*_MPa;
+    HL = 0.70;
+    T(1) = 45.+_t0C;
+    T(2) = 45.+_t0C;
+    XNG(3) = 0.999;
+    XNG(4) = 0.0;
+    XNF(3) = 0.;
+    XNF(4) = 0.;
+  ENDIF
+END
+
+EVENT _DtHandle
+  TYPE = 0;
+  REPLACE = 1;
+  TURN_ON = 1;
+  IF (TAU>0.) THEN
+    dt_max = 0.01;
+  ENDIF
+END
+
+EVENT _CalcSensor
+  TYPE = 0;
+  REPLACE = 1;
+  TURN_ON = 1;
+  G_OUT = "($W.CH1(1,11),1);
+END
+
+EVENT Close_Val
+  TYPE = 0;
+  REPLACE = 1;
+  TURN_ON = 1;
+	IF (T_CLOSE == 0.) & (HL.SLVES1 <= 0.100) THEN
+    T_CLOSE = TAU;
+  ENDIF
+	IF (T_CLOSE > 0.) THEN
+    S.VAL1 = MAX(0., 1. - (TAU - T_CLOSE)/1.0);
+    IF (S.VAL1 <= 0.) THEN
+			T_FIN_CLOSE = TAU;
+      TURN_ON = 0;
+    ENDIF
+  ENDIF
+END
+
+OUTPUT _Out
+  WRITE P.SLVES1, HL.SLVES1, T.SLVES1, G_OUT, T_CLOSE, T_FIN_CLOSE;
+END
