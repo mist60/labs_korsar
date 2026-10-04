@@ -1,0 +1,12 @@
+{
+  "t_valve_start": 962.64,
+  "t_valve_end": 963.65,
+  "t_valve_duration": 1.009999999999991,
+  "t_drain": 963.65,
+  "mass_drained": 297.3033064,
+  "P_before_close": 649810.0,
+  "h_residual": 0.099718,
+  "balance_residual": -1.3776779404339745e-05,
+  "source_file": "C:\\Users\\user\\Desktop\\labs_korsar\\010_accumulator_drain\\Final\\KORSAR\\result.dat",
+  "timestamp": "2026-10-04T18:20:25.819042"
+}
