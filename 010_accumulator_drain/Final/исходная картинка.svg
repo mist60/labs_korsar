@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="670" viewBox="0 0 1160 670">
+<defs>
+<marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse"><path d="M0 0L10 4L0 8Z" fill="#334155"/></marker>
+<clipPath id="tank"><rect x="85" y="150" width="300" height="350" rx="24"/></clipPath>
+</defs>
+<rect width="1160" height="670" fill="#fff"/>
+<g font-family="Arial, sans-serif" fill="#17283c">
+<text x="40" y="42" font-size="25" font-weight="bold">Слив гидроаккумулятора с азотной подушкой</text>
+<text x="40" y="75" font-size="18">SLVES1 → CH1 → BVOL_T1; VAL1 задает сопротивление и закрывается по объему воды.</text>
+<text x="235" y="126" text-anchor="middle" font-size="22" font-weight="bold">SLVES1 · V = 1 м³</text>
+<g clip-path="url(#tank)"><rect x="85" y="150" width="300" height="350" fill="#fef3c7"/><rect x="85" y="375" width="300" height="125" fill="#bae6fd"/></g>
+<rect x="85" y="150" width="300" height="350" rx="24" fill="none" stroke="#334155" stroke-width="3"/>
+<text x="235" y="210" text-anchor="middle" font-size="22">Азот + водяной пар</text>
+<text x="235" y="248" text-anchor="middle" font-size="19">Vg₀ = 0.650 м³</text>
+<text x="235" y="280" text-anchor="middle" font-size="19">p₀ = 10 МПа (абс.)</text>
+<text x="235" y="312" text-anchor="middle" font-size="19">T₀ = 45 °C</text>
+<path d="M85 375H385" stroke="#0284c7" stroke-width="2"/>
+<text x="235" y="411" text-anchor="middle" font-size="20">Вода · Vw₀ = 0.350 м³</text>
+<text x="235" y="440" text-anchor="middle" font-size="18">Начальный уровень 0.700 м</text>
+<path d="M85 460H385" stroke="#b91c1c" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="92" y="484" font-size="16" fill="#991b1b">Уставка: h = 0.100 м</text>
+<path d="M385 485H928" stroke="#334155" stroke-width="30"/>
+<path d="M385 485H928" stroke="#bae6fd" stroke-width="24"/>
+<g stroke="#64748b"><path d="M439.3 473V497 M493.6 473V497 M547.9 473V497 M602.2 473V497 M656.5 473V497 M710.8 473V497 M765.1 473V497 M819.4 473V497 M873.7 473V497"/></g>
+<path d="M632.5 461L656.5 485L632.5 509Z M680.5 461L656.5 485L680.5 509Z" fill="#fed7aa" stroke="#9a3412" stroke-width="2"/>
+<path d="M656.5 461V429" stroke="#9a3412" stroke-width="3"/>
+<rect x="530" y="354" width="220" height="66" rx="8" fill="#ffedd5" stroke="#9a3412"/>
+<text x="640" y="380" text-anchor="middle" font-size="21">VAL1 · CH1(6)</text>
+<text x="640" y="405" text-anchor="middle" font-size="17">ζ ≈ 8779; S: 1 → 0</text>
+<text x="470" y="545" font-size="19">CH1: L = 1 м, D = 40 мм, N = 10</text>
+<path d="M780 433H882" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="830" y="418" text-anchor="middle" font-size="18">G(t)</text>
+<rect x="930" y="357" width="195" height="158" rx="10" fill="#e2e8f0" stroke="#334155" stroke-width="2"/>
+<text x="1028" y="390" text-anchor="middle" font-size="22">BVOL_T1</text>
+<text x="1028" y="423" text-anchor="middle" font-size="19">Приемник</text>
+<text x="1028" y="455" text-anchor="middle" font-size="18">pb = 0.5 МПа</text>
+<text x="1028" y="486" text-anchor="middle" font-size="17">(абсолютное)</text>
+<rect x="515" y="166" width="580" height="116" rx="10" fill="#fef2f2" stroke="#b91c1c"/>
+<text x="540" y="198" font-size="20" font-weight="bold">EVENT: однократная отсечка</text>
+<text x="540" y="230" font-size="19">Vw / Vt ≤ 0.05 → закрыть VAL1 (S = 0)</text>
+<text x="540" y="258" font-size="17">Сохранить признак срабатывания; не открывать повторно.</text>
+<path d="M395 460H455V225H505" fill="none" stroke="#b91c1c" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+<path d="M640 282V344" fill="none" stroke="#b91c1c" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+<text x="85" y="548" font-size="17">Ось отвода: 0.030 м</text>
+<text x="85" y="577" font-size="17">Верх патрубка: 0.050 м &lt; h*</text>
+<text x="40" y="625" font-size="18">Аналитика: pVgⁿ = const; n = 1 → 180 с, n = 1.4 → 188.3 с до отсечки.</text>
+<text x="40" y="651" font-size="16" fill="#475569">Размеры и высоты на рисунке условные. VAL присоединен к соединению CH и не является отдельным объемом.</text>
+</g></svg>
