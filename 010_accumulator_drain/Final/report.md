@@ -115,7 +115,7 @@ $$\begin{cases}
 G(\tau) = F_{\text{прох}} \sqrt{\dfrac{2\rho\left(P(\tau) + \rho g z(\tau) - P_b\right)}{1 + \lambda \dfrac{l}{d} + \xi}} \\[12pt]
 \dfrac{dz}{d\tau} = -\dfrac{G(\tau)}{F_{\text{сосуд}} \, \rho} \\[12pt]
 \dfrac{dP}{d\tau} - \dfrac{P(\tau)}{H - z(\tau)} \cdot \dfrac{dz}{d\tau} = \dfrac{m R}{F_{\text{сосуд}} (H - z(\tau))} \cdot \dfrac{dT_г}{d\tau} \\[12pt]
-T_г(\tau) = T_0 \cdot \left(\dfrac{P(\tau)}{P_0}\right)^{\frac{\gamma}{\gamma - 1}}
+T_г(\tau) = T_0 \cdot \left(\dfrac{P(\tau)}{P_0}\right)^{\frac{\gamma - 1}{\gamma}}
 \end{cases}$$
 
 ### 5.2 Результат обработки данных из КОРСАРа и двух аналитических режимов
