@@ -1,0 +1,12 @@
+{
+  "t_valve_start": 931.9,
+  "t_valve_end": 932.91,
+  "t_valve_duration": 1.009999999999991,
+  "t_drain": 932.91,
+  "mass_drained": 297.30716446949225,
+  "P_before_close": 669500.0,
+  "h_residual": 0.099703,
+  "balance_residual": -1.0171852087070832e-05,
+  "source_file": "C:\\Users\\user\\Desktop\\labs_korsar\\010_accumulator_drain\\Final\\KORSAR\\С HCS\\result.dat",
+  "timestamp": "2026-10-17T15:11:23.048045"
+}

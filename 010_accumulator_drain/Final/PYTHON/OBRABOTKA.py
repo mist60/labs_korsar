@@ -5,14 +5,57 @@ matplotlib.use('Agg')  # чтобы графики сохранялись без
 import matplotlib.pyplot as plt
 from scipy.integrate import trapezoid
 import os
+import sys
 import json
 from datetime import datetime
 
 
 # ============================================================
-# НАСТРОЙКА: ПУТЬ К ФАЙЛУ result.dat
+# ВЫБОР ФАЙЛА И ПАПКИ ЧЕРЕЗ ДИАЛОГ (tkinter)
 # ============================================================
-filepath = r"C:\Users\user\Desktop\labs_korsar\010_accumulator_drain\Final\KORSAR\result.dat"
+
+def choose_input_file(initial_dir=None):
+    """Открывает диалог выбора файла result.dat. Возвращает путь или None."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+    except ImportError:
+        print("ОШИБКА: tkinter не установлен, диалог недоступен.")
+        return None
+
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes('-topmost', True)
+
+    path = filedialog.askopenfilename(
+        title="Выберите файл с данными (result.dat)",
+        initialdir=initial_dir or os.path.expanduser("~"),
+        filetypes=[("DAT files", "*.dat"), ("Text files", "*.txt"),
+                   ("All files", "*.*")]
+    )
+    root.destroy()
+    return path if path else None
+
+
+def choose_output_dir(initial_dir=None):
+    """Открывает диалог выбора папки для результатов. Возвращает путь или None."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+    except ImportError:
+        print("ОШИБКА: tkinter не установлен, диалог недоступен.")
+        return None
+
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes('-topmost', True)
+
+    path = filedialog.askdirectory(
+        title="Выберите папку для сохранения результатов",
+        initialdir=initial_dir or os.path.expanduser("~")
+    )
+    root.destroy()
+    return path if path else None
 
 
 # ============================================================
@@ -128,9 +171,9 @@ def compute_metrics(df, rho_water=990.5, tank_area=0.5):
     balance_residual = float(V_change - V_drained)
 
     return {
-        't_valve_start': float(t_valve_start),
-        't_valve_end': float(t_valve_end),
-        't_valve_duration': float(t_valve_duration),
+        't_valve_start': t_valve_start,
+        't_valve_end': t_valve_end,
+        't_valve_duration': t_valve_duration,
         't_drain': float(t_drain),
         'mass_drained': float(mass_drained),
         'P_before_close': float(P_before_close),
@@ -178,19 +221,16 @@ def plot_results(df, metrics, title_prefix="КОРСАР", save_dir=None):
         fig, ax = plt.subplots(figsize=(10, 4))
         ax.plot(t, y, style, linewidth=1.5, label=ylabel)
 
-        # --- Жёлтая линия: начало закрытия задвижки ---
         if t_close_start is not None:
             ax.axvline(t_close_start, color='gold', linestyle='--',
                        linewidth=1.5,
                        label=f'Начало закрытия ({t_close_start:.2f} с)')
 
-        # --- Красная линия: полное закрытие задвижки = время слива ---
         if t_close_end is not None:
             ax.axvline(t_close_end, color='r', linestyle='--',
                        linewidth=1.5,
                        label=f'Полное закрытие = время слива ({t_close_end:.2f} с)')
 
-        # --- Горизонтальная линия показателя ---
         if extra is not None:
             ax.axhline(extra[0], color='orange', linestyle=':', label=extra[1])
 
@@ -221,25 +261,84 @@ def fmt(value, unit="", digits=4, none_str="не обнаружено"):
     return f"{value:.{digits}f} {unit}".strip()
 
 
+def parse_args(argv):
+    """
+    Разбор аргументов командной строки.
+    Поддерживаются:
+      --input  <path>   путь к файлу result.dat
+      --output <path>   папка для результатов
+      --no-gui          не открывать диалоги (ошибка, если пути не заданы)
+    Возвращает (input_path, output_dir, no_gui).
+    """
+    input_path = None
+    output_dir = None
+    no_gui = False
+    i = 1
+    while i < len(argv):
+        arg = argv[i]
+        if arg == '--input' and i + 1 < len(argv):
+            input_path = argv[i + 1]
+            i += 2
+        elif arg == '--output' and i + 1 < len(argv):
+            output_dir = argv[i + 1]
+            i += 2
+        elif arg == '--no-gui':
+            no_gui = True
+            i += 1
+        else:
+            print(f"Предупреждение: неизвестный аргумент '{arg}' пропущен.")
+            i += 1
+    return input_path, output_dir, no_gui
+
+
 def main():
-    # --- Проверка файла ---
-    if not os.path.exists(filepath):
-        print(f"ОШИБКА: файл не найден по пути:\n  {filepath}")
-        print("\nПроверь переменную filepath в начале скрипта.")
+    input_path, output_dir, no_gui = parse_args(sys.argv)
+
+    # --- Выбор файла ---
+    if input_path is None:
+        if no_gui:
+            print("ОШИБКА: не задан --input, а --no-gui запрещает диалог.")
+            print("Использование: python script.py --input <result.dat> "
+                  "[--output <папка>] [--no-gui]")
+            return
+        initial_dir = os.path.expanduser("~")
+        input_path = choose_input_file(initial_dir)
+        if not input_path:
+            print("Файл не выбран. Выход.")
+            return
+
+    if not os.path.exists(input_path):
+        print(f"ОШИБКА: файл не найден по пути:\n  {input_path}")
         return
 
-    abs_path = os.path.abspath(filepath)
+    abs_path = os.path.abspath(input_path)
     print(f"Используется файл: {abs_path}")
 
-    # --- Папка для результатов ---
-    results_dir = os.path.join(os.path.dirname(abs_path), 'results')
+    # --- Выбор папки для результатов ---
+    if output_dir is None:
+        if no_gui:
+            # По умолчанию — папка results рядом с файлом
+            output_dir = os.path.join(os.path.dirname(abs_path), 'results')
+        else:
+            default_dir = os.path.join(os.path.dirname(abs_path), 'results')
+            os.makedirs(default_dir, exist_ok=True)
+            output_dir = choose_output_dir(default_dir)
+            if not output_dir:
+                print("Папка не выбрана. Выход.")
+                return
+
+    results_dir = os.path.abspath(output_dir)
     os.makedirs(results_dir, exist_ok=True)
     print(f"Папка для результатов: {results_dir}")
 
     # --- Загрузка ---
-    df = load_data(filepath)
+    df = load_data(abs_path)
     print(f"Загружено строк: {len(df)}")
     print(df.head())
+
+    if len(df) == 0:
+        print("ОШИБКА: файл пуст или не содержит корректных строк с 8 столбцами.")
+        return
 
     # --- Расчёт показателей ---
     metrics = compute_metrics(df, rho_water=990.5, tank_area=0.5)

@@ -2,6 +2,11 @@
 Сравнение экспериментальных данных с решением системы ДУ
 для изотермического (n=1) и адиабатического (n=γ) процессов.
 
+Флаг модели HCS относится к ЭКСПЕРИМЕНТАЛЬНОЙ кривой:
+  - в легенде подписываются экспериментальные точки;
+  - в заголовке графика указывается режим эксперимента;
+  - в имени файла — суффикс _HCS / _noHCS.
+
 Столбцы .dat:
     0: τ, время, с
     1: P, давление газовой подушки, Па
@@ -31,6 +36,7 @@ from tkinter import filedialog, messagebox, ttk
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PARAMS_FILE = os.path.join(SCRIPT_DIR, "params.json")
 LAST_DIR_FILE = os.path.join(SCRIPT_DIR, "last_dir.json")
+LAST_HCS_FILE = os.path.join(SCRIPT_DIR, "last_hcs.json")
 
 DEFAULTS = {
     "Fпрох":    1.0e-2,   # площадь проходного сечения, м^2
@@ -95,6 +101,26 @@ def save_last_dir(path):
         print(f"Не удалось сохранить путь: {ex}")
 
 
+def load_last_hcs():
+    """Возвращает True/False (последний выбор пользователя) или None."""
+    if not os.path.isfile(LAST_HCS_FILE):
+        return None
+    try:
+        with open(LAST_HCS_FILE, "r", encoding="utf-8") as f:
+            v = json.load(f).get("hcs")
+        return bool(v) if v is not None else None
+    except Exception:
+        return None
+
+
+def save_last_hcs(flag: bool):
+    try:
+        with open(LAST_HCS_FILE, "w", encoding="utf-8") as f:
+            json.dump({"hcs": bool(flag)}, f, ensure_ascii=False, indent=2)
+    except Exception as ex:
+        print(f"Не удалось сохранить флаг HCS: {ex}")
+
+
 # ---------------------------------------------------------------------------
 # 1. Диалоговое окно ввода параметров
 # ---------------------------------------------------------------------------
@@ -151,7 +177,7 @@ class ParamDialog(tk.Tk):
 
 
 # ---------------------------------------------------------------------------
-# 1b. Диалог выбора папки сохранения (с возможностью ввести путь вручную)
+# 1b. Диалог выбора папки сохранения
 # ---------------------------------------------------------------------------
 class SaveDirDialog(tk.Tk):
     def __init__(self, initial_dir):
@@ -207,6 +233,64 @@ class SaveDirDialog(tk.Tk):
             else:
                 return
         self.result = path
+        self.destroy()
+
+    def on_cancel(self):
+        self.result = None
+        self.destroy()
+
+
+# ---------------------------------------------------------------------------
+# 1c. Диалог выбора модели HCS (относится к эксперименту)
+# ---------------------------------------------------------------------------
+class HcsDialog(tk.Tk):
+    """
+    Спрашивает: в эксперименте использовалась модель HCS (учёт теплообмена)?
+    Результат: True / False / None (отмена).
+    """
+    def __init__(self, default_flag=None):
+        super().__init__()
+        self.title("Модель HCS (эксперимент)")
+        self.resizable(False, False)
+        self.result = None
+
+        frm = ttk.Frame(self, padding=16)
+        frm.grid()
+
+        ttk.Label(
+            frm,
+            text="В эксперименте учитывалась модель HCS?",
+            font=("", 11, "bold")
+        ).grid(row=0, column=0, columnspan=2, pady=(0, 10), sticky="w")
+
+        ttk.Label(
+            frm,
+            text="Пометка будет отнесена к экспериментальной кривой:\n"
+                 "в легенде, заголовке графика и имени файла\n"
+                 "(суффикс _HCS / _noHCS).",
+            foreground="#555"
+        ).grid(row=1, column=0, columnspan=2, pady=(0, 12), sticky="w")
+
+        self.var = tk.BooleanVar(
+            value=bool(default_flag) if default_flag is not None else True
+        )
+        ttk.Radiobutton(frm, text="Да — эксперимент с HCS",
+                        variable=self.var, value=True).grid(
+            row=2, column=0, columnspan=2, sticky="w", pady=2)
+        ttk.Radiobutton(frm, text="Нет — эксперимент без HCS",
+                        variable=self.var, value=False).grid(
+            row=3, column=0, columnspan=2, sticky="w", pady=2)
+
+        btns = ttk.Frame(frm)
+        btns.grid(row=4, column=0, columnspan=2, pady=(14, 0))
+        ttk.Button(btns, text="OK", command=self.on_ok).pack(side="left", padx=6)
+        ttk.Button(btns, text="Отмена", command=self.on_cancel).pack(side="left", padx=6)
+
+        self.bind("<Return>", lambda e: self.on_ok())
+        self.bind("<Escape>", lambda e: self.on_cancel())
+
+    def on_ok(self):
+        self.result = bool(self.var.get())
         self.destroy()
 
     def on_cancel(self):
@@ -339,13 +423,48 @@ def solve_adiab(p, data, t7):
 # ---------------------------------------------------------------------------
 # 5. Построение графиков
 # ---------------------------------------------------------------------------
-def plot_pair(tau_exp, y_exp, tau_num, y_num, ylabel, title, fname):
+def plot_pair(tau_exp, y_exp, tau_num, y_num, ylabel, title, fname,
+              hcs_flag=None):
+    """
+    Строит один график. Метка HCS относится к ЭКСПЕРИМЕНТАЛЬНОЙ кривой:
+      - подпись в легенде для экспериментальных точек;
+      - пометка в заголовке;
+      - маркеры эксперимента при включённом HCS выделяются цветом.
+    Расчётная кривая подписывается нейтрально.
+    """
     fig, ax = plt.subplots(figsize=(8, 5))
-    ax.plot(tau_exp, y_exp, "o", ms=3, label="эксперимент", alpha=0.7)
-    ax.plot(tau_num, y_num, "-", lw=1.8, label="расчёт (ДУ)")
+
+    # --- подпись эксперимента в зависимости от HCS ---
+    if hcs_flag is True:
+        exp_label = "эксперимент (HCS)"
+        exp_color = "tab:red"
+        exp_marker = "o"
+    elif hcs_flag is False:
+        exp_label = "эксперимент (без HCS)"
+        exp_color = "tab:blue"
+        exp_marker = "o"
+    else:
+        exp_label = "эксперимент"
+        exp_color = "C0"
+        exp_marker = "o"
+
+    ax.plot(tau_exp, y_exp, exp_marker, ms=3,
+            color=exp_color, label=exp_label, alpha=0.75)
+    ax.plot(tau_num, y_num, "-", lw=1.8, color="k",
+            label="расчёт (ДУ)")
+
     ax.set_xlabel("τ, с")
     ax.set_ylabel(ylabel)
-    ax.set_title(title)
+
+    # --- заголовок с пометкой, относящейся к эксперименту ---
+    if hcs_flag is True:
+        full_title = f"{title}  [эксперимент: HCS]"
+    elif hcs_flag is False:
+        full_title = f"{title}  [эксперимент: без HCS]"
+    else:
+        full_title = title
+    ax.set_title(full_title)
+
     ax.grid(True, alpha=0.3)
     ax.legend()
     fig.tight_layout()
@@ -354,7 +473,16 @@ def plot_pair(tau_exp, y_exp, tau_num, y_num, ylabel, title, fname):
     print(f"  сохранено: {fname}")
 
 
-def build_plots(outdir, data, t7, iso, adiab):
+def hcs_suffix(hcs_flag):
+    """Возвращает 'HCS' или 'noHCS' для имени файла."""
+    if hcs_flag is True:
+        return "HCS"
+    if hcs_flag is False:
+        return "noHCS"
+    return ""
+
+
+def build_plots(outdir, data, t7, iso, adiab, hcs_flag=None):
     tau_exp = data[:, 0]
     mask = tau_exp <= t7 + 1e-12
     te = tau_exp[mask]
@@ -364,35 +492,46 @@ def build_plots(outdir, data, t7, iso, adiab):
     Tg_exp = data[mask, 4]
     G_exp = data[mask, 5]
 
+    suf = hcs_suffix(hcs_flag)
+    sfx = f"_{suf}" if suf else ""
+
     # Изотермический
     t_i, P_i, z_i, Tg_i, G_i = iso
     plot_pair(te, G_exp,  t_i, G_i,  "G, кг/с",
               "Расход воды (изотермический процесс)",
-              os.path.join(outdir, "расход_изотермический.png"))
+              os.path.join(outdir, f"расход_изотермический{sfx}.png"),
+              hcs_flag=hcs_flag)
     plot_pair(te, z_exp,  t_i, z_i,  "z, м",
               "Уровень воды (изотермический процесс)",
-              os.path.join(outdir, "уровень_изотермический.png"))
+              os.path.join(outdir, f"уровень_изотермический{sfx}.png"),
+              hcs_flag=hcs_flag)
     plot_pair(te, P_exp,  t_i, P_i,  "P, Па",
               "Давление газовой подушки (изотермический процесс)",
-              os.path.join(outdir, "давление_изотермический.png"))
+              os.path.join(outdir, f"давление_изотермический{sfx}.png"),
+              hcs_flag=hcs_flag)
     plot_pair(te, Tg_exp, t_i, Tg_i, "Tг, К",
               "Температура газа (изотермический процесс)",
-              os.path.join(outdir, "температура_изотермический.png"))
+              os.path.join(outdir, f"температура_изотермический{sfx}.png"),
+              hcs_flag=hcs_flag)
 
     # Адиабатический
     t_a, P_a, z_a, Tg_a, G_a = adiab
     plot_pair(te, G_exp,  t_a, G_a,  "G, кг/с",
               "Расход воды (адиабатический процесс)",
-              os.path.join(outdir, "расход_адиабатический.png"))
+              os.path.join(outdir, f"расход_адиабатический{sfx}.png"),
+              hcs_flag=hcs_flag)
     plot_pair(te, z_exp,  t_a, z_a,  "z, м",
               "Уровень воды (адиабатический процесс)",
-              os.path.join(outdir, "уровень_адиабатический.png"))
+              os.path.join(outdir, f"уровень_адиабатический{sfx}.png"),
+              hcs_flag=hcs_flag)
     plot_pair(te, P_exp,  t_a, P_a,  "P, Па",
               "Давление газовой подушки (адиабатический процесс)",
-              os.path.join(outdir, "давление_адиабатический.png"))
+              os.path.join(outdir, f"давление_адиабатический{sfx}.png"),
+              hcs_flag=hcs_flag)
     plot_pair(te, Tg_exp, t_a, Tg_a, "Tг, К",
               "Температура газа (адиабатический процесс)",
-              os.path.join(outdir, "температура_адиабатический.png"))
+              os.path.join(outdir, f"температура_адиабатический{sfx}.png"),
+              hcs_flag=hcs_flag)
 
 
 # ---------------------------------------------------------------------------
@@ -424,9 +563,19 @@ def main():
     save_params(p)
     print("Параметры:", p)
 
+    # --- выбор модели HCS (относится к эксперименту) ---
+    last_hcs = load_last_hcs()
+    hcs_dlg = HcsDialog(default_flag=last_hcs)
+    hcs_dlg.mainloop()
+    if hcs_dlg.result is None:
+        print("Выбор HCS отменён. Выход.")
+        return
+    hcs_flag = hcs_dlg.result
+    save_last_hcs(hcs_flag)
+    print(f"Эксперимент: {'с HCS' if hcs_flag else 'без HCS'}")
+
     # --- папка для сохранения графиков ---
     last_dir = load_last_dir()
-    # если папка ещё не задавалась — предлагаем папку с .dat файлом
     initial_outdir = last_dir or os.path.dirname(os.path.abspath(dat_path))
     dir_dlg = SaveDirDialog(initial_outdir)
     dir_dlg.mainloop()
@@ -453,11 +602,13 @@ def main():
 
     # --- графики ---
     print(f"Сохранение графиков в: {outdir}")
-    build_plots(outdir, data, t7, iso, adiab)
+    build_plots(outdir, data, t7, iso, adiab, hcs_flag=hcs_flag)
 
-    messagebox.showinfo("Готово",
-                        f"Графики сохранены в:\n{outdir}")
-    print("Готово.")
+    exp_txt = "эксперимент с HCS" if hcs_flag else "эксперимент без HCS"
+    messagebox.showinfo(
+        "Готово",
+        f"Графики ({exp_txt}) сохранены в:\n{outdir}")
+    print(f"Готово. HCS (эксперимент) = {hcs_flag}")
 
 
 if __name__ == "__main__":
